@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-/*getbits: get n bits from position p*/
 unsigned getbits(unsigned x, int p, int n)
 {
     //here we assump that the index begins at zero
@@ -28,4 +27,27 @@ void output_by_binary_(unsigned n)
     else{
         printf("0");
     }
+}
+
+unsigned setbits(unsigned x, int p, int n, unsigned y)
+{
+    unsigned mask = ~(~0<<n)<<(p-n+1);
+    return ((~mask)&x)|((~(~0<<n)&y)<<(p-n+1));
+}
+
+unsigned invertbits(unsigned x, int p, int n)
+{
+    unsigned mask = ~(~0<<n)<<(p-n+1);
+    return (mask|x)//set the n bits on 1, keep the others
+            &
+            ~(mask&x);//extract the n bits and invert
+}
+
+unsigned rightrot(unsigned x, int n)
+{
+    return (
+            (x<<(sizeof(x)*8-n))
+            |
+            (x>>n)
+            );
 }
