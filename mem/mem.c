@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <assert.h>
 
 typedef double Align;/*for alignment to long boundary*/
 
@@ -21,11 +23,12 @@ typedef union header Header;
 
 static Header base;//哨兵节点
 static Header *freep = NULL;
+static Header *morecore(unsigned nu);
 
 void *smalloc(unsigned nbytes)
 {
     Header *p, *prevp;
-    Header* moreroce(unsigned);
+    // Header* moreroce(unsigned);
     unsigned nunits;//the number of block we malloc
 
     //这里多申请了一个block，作为给出去的blck的header
@@ -50,29 +53,30 @@ void *smalloc(unsigned nbytes)
                 p->size=nunits;
             }
             //**********************************//
-            freep=prevp;//make sure freep is valid
+            freep=prevp;//每次都从上一次获得的地方重新开始
             return (void*)(p+1);
         }
         //
         if(freep==p)//扫了一遍回到起点
         {
             //**********************************//
-            if((p=moreroce(nunits))==NULL){
+            if((p=morecore(nunits))==NULL){
                 return NULL;
             }
+            // printf("%p\n",p);
         }
     }
-
-    return NULL;
+    printf("should never get here!\n");
+    // return NULL;
 }
 
-#define NALLOC 1024 //minimum size
-static Header *moreroce(unsigned nu)
+#define NALLOC 0 //minimum size
+static Header *morecore(unsigned nu)
 {
-    char *request, *oldp, *sbrk(int);
+    char *request, *oldp;
     Header* up;
 
-    char* oldp = sbrk(0);
+    oldp = sbrk(0);
 
     if(nu<NALLOC)nu = NALLOC;/*avoid frequently calling (system call) sbrk*/
 
@@ -84,14 +88,20 @@ static Header *moreroce(unsigned nu)
     }
     assert(request==oldp);
     
-    up = (Header*)request + 1;
+    up = (Header*)request;
+    up->size = nu;
     //假装free，其实是把up放进链表
-    sfree(up);
+    sfree((void*)(up+1));
 
-    return up;
+    // printf("up:%p\n",up);
+
+    /*这里注意up的next不一定是有效的，考虑up被连接成一块大的内存
+     *所以不要返回up，会segment fault
+    */
+    return freep;
 }
 
-void free(void* ap)
+void sfree(void* ap)
 {
     Header* hp = (Header*)ap - 1;//回退到头部
     Header *prevp, *p;
@@ -99,7 +109,7 @@ void free(void* ap)
     for(prevp=freep,p=prevp->next;
         !(hp>prevp&&hp<p); prevp=p,p=p->next
     ){
-        if(p<prevp&&(hp>prevp||hp<p))
+        if(p<=prevp&&(hp>prevp||hp<p))
         break;
     }
     //
@@ -112,7 +122,21 @@ void free(void* ap)
         prevp->size+=hp->size;
     }
     else{
-        prevp->next=hp;
+        // printf("hp:%p\n",hp);
         hp->next=p;
+        prevp->next=hp;
     }
+    // freep=hp;
+}
+
+void dump_addr()
+{
+    printf("%p", freep);
+    Header* p = freep->next;
+    // printf("->%p", p);
+
+    for(;p!=freep;p=p->next){
+        printf("->%p", p);
+    }
+    printf("\n");
 }

@@ -1,17 +1,27 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "mem.h"
 
 int main(void)
 {
-    void* p = malloc(64);
-    void* p1 = malloc(64);
-    void* p2 = malloc(64);
+    int* matrix[10];
+    for(int i=0;i<10;i++){
+        matrix[i]=smalloc(10*sizeof(int));
+        for(int j = 0;j<10;j++){
+            matrix[i][j]=i*10+j;
+        }
+    }
+    for(int i=0;i<10;i++){
+        for(int j=0;j<10;j++){
+            printf("%d ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+    for(int i=0;i<10;i++){
+        sfree(matrix[i]);
+        matrix[i]=NULL;
+    }
 
-    printf("p:%p, p1:%p, p2:%p\n", p, p1, p2);
-
-    free(p);
-    free(p1);
-    free(p2);
-
+    // dump_addr();
     return 0;
 }
